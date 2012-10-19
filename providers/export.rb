@@ -28,7 +28,12 @@ action :create do
     execute "notify_export_create" do
       command "/bin/true"
       notifies :create, resources("template[/etc/exports]")
-      not_if "grep -q '#{export_line}' /etc/exports"
+      # Only create the template if an export line is missing.
+      # We do this to avoid running exportfs all the time.
+      not_if do
+        exports = ::File.read '/etc/exports'
+        node['nfs']['exports'].all? { |export| exports.include? export }
+      end
       action :run
     end
     new_resource.updated_by_last_action(true)
